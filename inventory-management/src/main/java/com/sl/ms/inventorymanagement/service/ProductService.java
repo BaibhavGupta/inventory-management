@@ -3,7 +3,10 @@ package com.sl.ms.inventorymanagement.service;
 import com.sl.ms.inventorymanagement.exception.ProductNotFound;
 import com.sl.ms.inventorymanagement.model.Product;
 import com.sl.ms.inventorymanagement.repository.ProductRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -16,17 +19,24 @@ public class ProductService {
 
     @Autowired
     ProductRepository productRepository;
+    private final Logger LOG = LoggerFactory.getLogger(this.getClass());
 
+    @Cacheable("all-products")
     public List<Product> getProducts(){
         return productRepository.findAll();
     }
 
-    public Object findByProductId(int productId) throws Exception {
+    public Object findByProductId(int productId, String uuid) throws Exception {
         Optional<Product> product = productRepository.findById(productId);
-        if (product.isPresent())
+        if (product.isPresent() && product.get().getQuantity() > 0){
+            Product lProduct = product.get();
+            LOG.info("UUID: "+ uuid +" Product Found " + lProduct);
             return product.get();
-        else
+        } else{
+            LOG.error("UUID: "+ uuid +" Product Found " + productId);
             throw new ProductNotFound();
+        }
+
     }
 
     public void updateProduct(int productId, Product product) {
@@ -59,6 +69,8 @@ public class ProductService {
             Product dto = new Product();
             dto.setId(a.getId());
             dto.setName(a.getName());
+            dto.setQuantity(a.getQuantity());
+            dto.setPrice(a.getPrice());
             list1.add(dto);
         });
 
